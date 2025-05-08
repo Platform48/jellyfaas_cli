@@ -131,20 +131,33 @@ install_go() {
     fi
     log_success "Go installed successfully."
 
-    # Set PATH if needed
+    # Add Go to PATH for current session
+    export PATH=$PATH:/usr/local/go/bin
+    log_info "Added Go to PATH for current session"
+
+    # Check if Go is now available
     if ! command_exists go; then
-        log_warning "Go executable not found in PATH."
+        log_error "Go installation succeeded but executable not found in PATH."
         log_info "Please add Go to your PATH by adding the following line to your ~/.zshrc or ~/.bash_profile:"
         echo 'export PATH=$PATH:/usr/local/go/bin'
 
-        # Add to PATH for current session
-        export PATH=$PATH:/usr/local/go/bin
+        # Try alternative path for Apple Silicon Macs
+        if [ "$ARCH" = "arm64" ]; then
+            log_info "Trying alternative path for Apple Silicon..."
+            export PATH=$PATH:/opt/homebrew/bin:/opt/homebrew/go/bin
 
-        if ! command_exists go; then
-            log_error "Go installation appears to have failed. Please install it manually."
+            if ! command_exists go; then
+                log_error "Could not find Go in PATH. Please restart your terminal or add Go to your PATH manually."
+                exit 1
+            else
+                log_success "Found Go in alternative path."
+            fi
+        else
             exit 1
         fi
     fi
+
+    log_info "Using Go version: $(go version)"
 }
 
 # Function to check and install Git
@@ -198,7 +211,7 @@ install_binary() {
     # Get the new version before installation
     local NEW_VERSION=$(get_built_version)
 
-    log_info "Installing JellyFaaS CLI to /usr/local/bin... (You may need to enter your password to continue)"
+    log_info "Installing JellyFaaS CLI to /usr/local/bin..."
     if [ ! -d "/usr/local/bin" ]; then
         log_info "Creating /usr/local/bin directory..."
         if ! sudo mkdir -p /usr/local/bin; then
