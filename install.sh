@@ -8,6 +8,9 @@
 # 4. Building the binary
 # 5. Installing it to /usr/local/bin
 
+# Script version - change this when updating the script
+SCRIPT_VERSION="1.0.0"
+
 set -e
 
 # Text formatting
@@ -118,14 +121,14 @@ install_go() {
     local GO_PKG_PATH="$TMP_DIR/$GO_PKG"
 
     log_info "Downloading Go installation package..."
-    if ! curl -s -L -o "$GO_PKG_PATH" "$GO_URL"; then
+    if ! curl -s -L -o "$GO_PKG_PATH" "$GO_URL" > /dev/null 2>&1; then
         log_error "Failed to download Go. Please check your internet connection and try again."
         exit 1
     fi
     log_success "Go downloaded successfully."
 
     log_info "Installing Go... (this may require your admin password)"
-    if ! sudo installer -pkg "$GO_PKG_PATH" -target /; then
+    if ! sudo installer -pkg "$GO_PKG_PATH" -target / > /dev/null 2>&1; then
         log_error "Failed to install Go. Please try installing it manually."
         exit 1
     fi
@@ -245,7 +248,7 @@ install_binary() {
 
 # Main script execution
 main() {
-    echo -e "\n${BOLD}JellyFaaS CLI Installer for macOS${NC}\n"
+    echo -e "\n${BOLD}JellyFaaS CLI Installer for macOS v${SCRIPT_VERSION}${NC}\n"
 
     # Check for existing JellyFaaS installation
     if check_existing_jellyfaas; then
