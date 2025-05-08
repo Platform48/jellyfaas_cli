@@ -198,7 +198,7 @@ install_binary() {
     # Get the new version before installation
     local NEW_VERSION=$(get_built_version)
 
-    log_info "Installing JellyFaaS CLI to /usr/local/bin..."
+    log_info "Installing JellyFaaS CLI to /usr/local/bin... (You may need to enter your password to continue)"
     if [ ! -d "/usr/local/bin" ]; then
         log_info "Creating /usr/local/bin directory..."
         if ! sudo mkdir -p /usr/local/bin; then
