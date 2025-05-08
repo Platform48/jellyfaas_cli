@@ -46,7 +46,6 @@ const p48templatesRepo = "https://github.com/Platform48/jellyfaas_public_templat
 const hiddenDataFile = ".jellyfaas"
 const jfApikeyHeader = "x-jf-apikey"
 const jellyfaasEndpoint = "https://api.jellyfaas.com/"
-const jellyfaasAIEndpoint = "https://ai.jellyfaas.com/"
 
 const maxOpsLoops = 10
 
@@ -63,8 +62,6 @@ const rubyTemplate = "ruby-template"
 func main() {
 	var opts entities.Options
 
-	color.Yellow("\nJellyFaaS CLI v" + version + " - http://app.jellyfaas.com \n\n")
-
 	if strings.Contains(p48CoreService, "localhost") {
 		color.Cyan("Running in development mode")
 	}
@@ -73,6 +70,10 @@ func main() {
 
 	if _, err := parser.Parse(); err != nil {
 		os.Exit(1)
+	}
+
+	if parser.Active.Name != "version" {
+		color.Yellow("\nJellyFaaS CLI v" + version + " - http://app.jellyfaas.com \n\n")
 	}
 
 	switch parser.Active.Name {
@@ -91,8 +92,6 @@ func main() {
 		getLibrary(opts.Library.Details, opts.Library.ReadMe)
 	case "deploy":
 		deployFunction(opts.Deploy.ZipFile, opts.Deploy.Wait)
-	//case "publish":
-	//	setPublishedState(opts.Publish.ID, opts.Publish.State)
 	case "token":
 		getToken(opts.Token)
 	case "spec":
@@ -112,10 +111,15 @@ func main() {
 		checkIfFunctionExists(opts.Exists.Name)
 	case "base64":
 		base64EncodeDecode(opts.Base64.Encode, opts.Base64.Decode)
+	case "version":
+		showVersion()
 	default:
 		fmt.Println("Unknown command")
 	}
+}
 
+func showVersion() {
+	fmt.Printf("JellyFaaS CLI v%s\n", version)
 }
 
 func base64EncodeDecode(encode string, decode string) {

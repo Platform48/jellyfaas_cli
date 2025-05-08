@@ -15,7 +15,10 @@ type Options struct {
 	Zip       ZipCommand         `command:"zip" description:"Zip a function"`
 	Exists    Exists             `command:"exists" description:"Check if a function exists"`
 	Base64    Base64Command      `command:"base64" description:"Base64 encode/decode a string"`
+	Version   VersionCommand     `command:"version" short:"v" description:"Show the JellyFaaS CLI version"`
 }
+
+type VersionCommand struct{}
 
 type Base64Command struct {
 	Encode string `short:"e" long:"encode" description:"Encode a string" required:"false"`
