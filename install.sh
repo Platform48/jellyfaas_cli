@@ -9,7 +9,7 @@
 # 5. Installing it to /usr/local/bin
 
 # Script version - change this when updating the script
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.0.1"
 
 set -e
 
@@ -20,6 +20,40 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
+
+# Spinner function
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps -p $pid -o pid=)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+# Function for tasks with spinner
+run_with_spinner() {
+    local message="$1"
+    local command="$2"
+
+    echo -ne "${BLUE}[INFO]${NC} $message"
+    eval "$command" &
+    spinner $!
+
+    # Check if the command was successful
+    if [ $? -eq 0 ]; then
+        echo -e "\r${GREEN}[SUCCESS]${NC} $message"
+        return 0
+    else
+        echo -e "\r${RED}[ERROR]${NC} $message"
+        return 1
+    fi
+}
 
 # Temporary directory for the repository
 TMP_DIR=$(mktemp -d 2>/dev/null)
@@ -120,46 +154,51 @@ install_go() {
     local GO_URL="https://go.dev/dl/$GO_PKG"
     local GO_PKG_PATH="$TMP_DIR/$GO_PKG"
 
-    log_info "Downloading Go installation package..."
-    if ! curl -s -L -o "$GO_PKG_PATH" "$GO_URL" > /dev/null 2>&1; then
+    log_info "Downloading Go installation package... (this may take a few minutes depending on your connection speed)"
+
+    # Download with spinner
+    (curl -s -L -o "$GO_PKG_PATH" "$GO_URL" > /dev/null 2>&1) &
+    spinner $!
+
+    if [ ! -f "$GO_PKG_PATH" ] || [ ! -s "$GO_PKG_PATH" ]; then
         log_error "Failed to download Go. Please check your internet connection and try again."
         exit 1
     fi
     log_success "Go downloaded successfully."
 
-    log_info "Installing Go... (this may require your admin password)"
-    if ! sudo installer -pkg "$GO_PKG_PATH" -target / > /dev/null 2>&1; then
-        log_error "Failed to install Go. Please try installing it manually."
-        exit 1
-    fi
-    log_success "Go installed successfully."
-
-    # Add Go to PATH for current session
-    export PATH=$PATH:/usr/local/go/bin
-    log_info "Added Go to PATH for current session"
+    log_info "Installing Go... (this may require your admin password and take a minute to complete)"
+    (sudo installer -pkg "$GO_PKG_PATH" -target / > /dev/null 2>&1) &
+    spinner $!
 
     # Check if Go is now available
     if ! command_exists go; then
-        log_error "Go installation succeeded but executable not found in PATH."
-        log_info "Please add Go to your PATH by adding the following line to your ~/.zshrc or ~/.bash_profile:"
-        echo 'export PATH=$PATH:/usr/local/go/bin'
+        # Add Go to PATH for current session
+        export PATH=$PATH:/usr/local/go/bin
+        log_info "Added Go to PATH for current session"
 
-        # Try alternative path for Apple Silicon Macs
-        if [ "$ARCH" = "arm64" ]; then
-            log_info "Trying alternative path for Apple Silicon..."
-            export PATH=$PATH:/opt/homebrew/bin:/opt/homebrew/go/bin
+        if ! command_exists go; then
+            log_error "Go installation failed. Please try installing it manually."
+            log_info "Please add Go to your PATH by adding the following line to your ~/.zshrc or ~/.bash_profile:"
+            echo 'export PATH=$PATH:/usr/local/go/bin'
 
-            if ! command_exists go; then
-                log_error "Could not find Go in PATH. Please restart your terminal or add Go to your PATH manually."
-                exit 1
+            # Try alternative path for Apple Silicon Macs
+            if [ "$ARCH" = "arm64" ]; then
+                log_info "Trying alternative path for Apple Silicon..."
+                export PATH=$PATH:/opt/homebrew/bin:/opt/homebrew/go/bin
+
+                if ! command_exists go; then
+                    log_error "Could not find Go in PATH. Please restart your terminal or add Go to your PATH manually."
+                    exit 1
+                else
+                    log_success "Found Go in alternative path."
+                fi
             else
-                log_success "Found Go in alternative path."
+                exit 1
             fi
-        else
-            exit 1
         fi
     fi
 
+    log_success "Go installed successfully."
     log_info "Using Go version: $(go version)"
 }
 
@@ -190,8 +229,11 @@ check_and_install_git() {
 # Function to clone the repository
 clone_repo() {
     log_info "Cloning JellyFaaS CLI repository..."
-    # Use -q flag to silence git output and redirect any remaining output to /dev/null
-    if ! git clone -q https://github.com/Platform48/jellyfaas_cli.git "$TMP_DIR/jellyfaas_cli" > /dev/null 2>&1; then
+    # Use -q flag to silence git output and run with spinner
+    (git clone -q https://github.com/Platform48/jellyfaas_cli.git "$TMP_DIR/jellyfaas_cli" > /dev/null 2>&1) &
+    spinner $!
+
+    if [ ! -d "$TMP_DIR/jellyfaas_cli" ]; then
         log_error "Failed to clone repository. Please check your internet connection."
         exit 1
     fi
@@ -200,9 +242,14 @@ clone_repo() {
 
 # Function to build the binary
 build_binary() {
-    log_info "Building JellyFaaS CLI..."
+    log_info "Building JellyFaaS CLI... (this may take a moment)"
     cd "$TMP_DIR/jellyfaas_cli"
-    if ! go build -o jellyfaas cmd/jellyfaas.go > /dev/null 2>&1; then
+
+    # Build with spinner
+    (go build -o jellyfaas cmd/jellyfaas.go > /dev/null 2>&1) &
+    spinner $!
+
+    if [ ! -f "./jellyfaas" ]; then
         log_error "Failed to build JellyFaaS CLI."
         exit 1
     fi
