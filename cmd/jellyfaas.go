@@ -961,14 +961,14 @@ func zipProjectAndDeploy(destinationDir string, overwrite bool, deploy bool, wai
 	} else {
 		fmt.Println(glg.Green("Directory zipped successfully!"))
 		fmt.Println(glg.Green("Zip file: " + zipFileName))
-		fmt.Println(glg.Green("Ready for deploy"))
+		fmt.Println(glg.Green("Ready for deploy:"))
 	}
 
 	if deploy {
 		deployFunction(zipFileName, wait)
 	}
 
-	fmt.Println(glg.Green("Done...\n"))
+	fmt.Println(glg.Green("This usually takes a few mins, you can always see if you have\nand issue with 'jellyfaas builds list' to see if you had a deploy problem.\n"))
 }
 
 func validatePaths(source, target string, overwrite bool) error {
